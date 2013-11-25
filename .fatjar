@@ -1,0 +1,14 @@
+#Fat Jar Configuration File
+#Mon May 20 11:58:22 ECT 2013
+onejar.license.required=true
+manifest.classpath=
+manifest.removesigners=true
+onejar.checkbox=false
+jarname=agINFRA-couchdb-4store.jar
+manifest.mergeall=false
+manifest.mainclass=LOM4store
+manifest.file=<createnew>
+jarname.isextern=false
+onejar.expand=
+excludes=
+includes=
