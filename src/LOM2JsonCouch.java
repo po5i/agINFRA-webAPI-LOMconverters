@@ -93,18 +93,27 @@ public class LOM2JsonCouch {
 		System.out.println("Hello");
 		
 		//PARAMS
-		/*
+		if(args.length != 6)
+	    {
+	        System.out.println("Proper Arguments are: [datasets path] [uriGraph name] [local couchdb proxy hostname and directory (ej: localhost/aginfra)] [commit to couchdb] [limit] [offset]");
+	        System.exit(0);
+	    }
+		
 		String dspath = args[0];
 		//String urlStore = args[1];
 		String uriGraph = args[1];
 		String localCouchdbProxy = args[2];
-		String commit4store_arg = args[3];*/
+		String commit4store_arg = args[3];
+		int limit = Integer.parseInt(args[4]);
+		int offset = Integer.parseInt(args[5]);
 		
-		String dspath = "/home/carlos/workspace/WebAPI/ds/";
+		
+		
+		/*String dspath = "/home/carlos/workspace/WebAPI/ds/";
 		//String urlStore = "http://4store.ipb.ac.rs:81";
 		String uriGraph = "aginfra_eu";
 		String localCouchdbProxy = "localhost/aginfra";
-		String commit4store_arg = "commit";
+		String commit4store_arg = "false";*/
 		
 		boolean commit4store = false;
 		if(commit4store_arg.equals("commit"))
@@ -124,6 +133,7 @@ public class LOM2JsonCouch {
 		//StorageService service;
 		ArrayList<KeyValue> keyValues = new ArrayList<KeyValue>();
 		HashMap fileDatasetMap = new HashMap(); 
+		int counter = 0;
 		
 		
 		
@@ -145,7 +155,7 @@ public class LOM2JsonCouch {
 			
 			//String response_str = response.getEntity(String.class);	
 			String response_str = getStringFromInputStream(response.getEntityInputStream());
-			//System.out.println(response_str);	//debug
+			System.out.println(response_str);	//debug
 			
 			System.out.println("Finished IPB call");
 			
@@ -208,7 +218,8 @@ public class LOM2JsonCouch {
 		
 		//foreach dataset.tar.gz **
 		//Iterate 
-		File root = new File("ds/");
+		File root = new File(dspath);
+		//root.mkdirs();
 		Collection files = FileUtils.listFiles(root, null, false);
 		
 		
@@ -233,7 +244,7 @@ public class LOM2JsonCouch {
 			try {
 				FileInputStream fin = new FileInputStream(inputDataset);
 				BufferedInputStream in = new BufferedInputStream(fin);
-				FileOutputStream out = new FileOutputStream("ds/archive.tar");
+				FileOutputStream out = new FileOutputStream(dspath+"/archive.tar");
 				GzipCompressorInputStream gzIn;		
 				gzIn = new GzipCompressorInputStream(in);		
 				final byte[] buffer = new byte[1024];
@@ -245,13 +256,13 @@ public class LOM2JsonCouch {
 				gzIn.close();
 				
 				//read the tar
-				File input = new File("ds/archive.tar"); //getFile("ds/archive.tar");			
+				File input = new File(dspath+"/archive.tar"); //getFile("ds/archive.tar");			
 		        InputStream is = new FileInputStream(input);
 		        ArchiveInputStream in1 = new ArchiveStreamFactory().createArchiveInputStream("tar", is);
 		        TarArchiveEntry entry = (TarArchiveEntry)in1.getNextEntry();
 		        
 		        while (entry != null) {// create a file with the same name as the tarEntry
-		            File destPath = new File("ds/extract/" + entry.getName());
+		            File destPath = new File(dspath+"/extract/" + entry.getName());
 		            if (entry.isDirectory()) {
 		                destPath.mkdirs();
 		            } else {
@@ -275,14 +286,19 @@ public class LOM2JsonCouch {
 			
 			//Iterate on extracted files
 			try{ 
-				File root1 = new File("ds/extract/");
+				File root1 = new File(dspath+"/extract/");
 				Collection files1 = FileUtils.listFiles(root1, null, true);
-				new File("ds/rdf").mkdir();
-				new File("ds/json").mkdir();
+				new File(dspath+"/rdf").mkdir();
+				new File(dspath+"/json").mkdir();
 	
 				for (Iterator iterator1 = files1.iterator(); iterator1.hasNext();) {
 					File lomFile = (File) iterator1.next();
 					String inputFile = lomFile.getAbsolutePath();
+					
+					//offset
+					if(offset > counter){
+						continue;
+					}
 	
 					System.out.println("      Processing file:"+inputFile);
 					
@@ -418,11 +434,18 @@ public class LOM2JsonCouch {
 											//db.saveDocument(newdoc); // auto-generated id given by the database
 											
 											FileOutputStream fop = null;
-											File rdfFile = new File("ds/json/"+lomFile.getName().replace(".xml", ".json"));
+											File rdfFile = new File(dspath+"/json/"+lomFile.getName().replace(".xml", ".json"));
 											fop = new FileOutputStream(rdfFile);
 											
 											//deprecated
 											model.write(fop,"RDF/JSON");	//guardar todo el RDF en un solo JSON 
+											counter++;
+											
+											//check limit
+											if(limit > 0 && counter > limit){
+												break;
+											}
+											
 											
 											
 										} catch (Exception e) {
@@ -466,10 +489,11 @@ public class LOM2JsonCouch {
 				
 				//Borrar todo lo de ds/extract/, rdf y el archive.tar para liberar espacio
 				try {
-					FileUtils.deleteDirectory(new File("ds/extract/"));
-					FileUtils.deleteDirectory(new File("ds/rdf/"));
-					FileUtils.deleteDirectory(new File("ds/json/"));
-					FileUtils.deleteQuietly(new File("ds/archive.tar"));
+					FileUtils.deleteDirectory(new File(dspath+"/extract/"));
+					FileUtils.deleteDirectory(new File(dspath+"/rdf/"));
+					FileUtils.deleteDirectory(new File(dspath+"/json/"));
+					FileUtils.deleteQuietly(new File(dspath+"/archive.tar"));
+					FileUtils.deleteQuietly(new File(dsFile.getAbsolutePath()));	//delete dataset
 					
 				} catch (IOException e) {
 					e.printStackTrace();
@@ -478,6 +502,11 @@ public class LOM2JsonCouch {
 			
 			
 			//break;	//debug (only one dataset)
+			
+			//check limit (again - after couchdb insert)
+			if(limit > 0 && counter > limit){
+				break;
+			}
 
 		}
 

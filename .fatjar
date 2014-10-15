@@ -1,12 +1,12 @@
 #Fat Jar Configuration File
-#Mon May 20 11:58:22 ECT 2013
+#Wed Apr 30 11:28:56 ECT 2014
 onejar.license.required=true
 manifest.classpath=
 manifest.removesigners=true
 onejar.checkbox=false
 jarname=agINFRA-couchdb-4store.jar
 manifest.mergeall=false
-manifest.mainclass=LOM4store
+manifest.mainclass=LOM2JsonCouch
 manifest.file=<createnew>
 jarname.isextern=false
 onejar.expand=
